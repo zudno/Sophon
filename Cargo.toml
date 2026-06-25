@@ -1,0 +1,12 @@
+[package]
+name = "sophon"
+version = "0.1.0"
+edition = "2024"
+description = "Herramienta de reconocimiento de red"
+
+[dependencies]
+tokio = { version = "1.36", features = ["full"] }
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+ipnet = "2.9"
+local-ip-address = "0.6"
