@@ -18,6 +18,9 @@ pub async fn sweep_network(subnet: Ipv4Net) {
             let is_alive = ping_host(&ip_str).await;
             if is_alive {
                 println!("{} Host vivo detectado: {}", "[+]".bright_green(), ip_str.cyan());
+                
+                // Si el host está vivo, lanzamos el escáner de Capa 4
+                crate::net::tcp::scan_ports(&ip_str).await;
             }
             is_alive
         });
