@@ -9,42 +9,66 @@ pub async fn sweep_network(subnet: Ipv4Net) {
     
     let mut tasks = vec![];
 
-    // Recorremos todas las IPs de la subred
+    // FASE 1: Detección de Capa 3 y 4
     for target_ip in subnet.hosts() {
         let ip_str = target_ip.to_string();
         
-        // Abrimos un hilo asíncrono por cada IP
         let task = task::spawn(async move {
             let is_alive = ping_host(&ip_str).await;
             if is_alive {
                 println!("{} Host vivo detectado: {}", "[+]".bright_green(), ip_str.cyan());
-                
-                // Si el host está vivo, lanzamos el escáner de Capa 4
                 crate::net::tcp::scan_ports(&ip_str).await;
+                Some(ip_str) // Devolvemos la IP para la Fase 2
+            } else {
+                None
             }
-            is_alive
         });
         
         tasks.push(task);
     }
 
-    // Esperamos a que todos los pings terminen de regresar
-    let mut found = 0;
+    // Recolectamos a los sobrevivientes
+    let mut alive_hosts = vec![];
     for t in tasks {
-        if let Ok(true) = t.await {
-            found += 1;
+        if let Ok(Some(ip)) = t.await {
+            alive_hosts.push(ip);
+        }
+    }
+
+    // FASE 2: Extracción de Identidades de Hardware (Capa 2)
+    println!("------------------------------------------------");
+    println!("{} Infiltrando caché ARP para extraer firmas de hardware...", "[SOPHON]".blue().bold());
+    
+    let arp_table = crate::net::mac::get_arp_table().await;
+    
+    for ip in &alive_hosts {
+        if let Some(mac) = arp_table.get(ip) {
+            let manufacturer = crate::net::mac::get_manufacturer(mac);
+            
+            // Formato condicional para destacar cuando sí reconocemos al fabricante
+            let mfg_colored = if manufacturer.contains("Desconocido") {
+                manufacturer.bright_black() // Gris oscuro si no lo conocemos
+            } else {
+                manufacturer.bright_yellow().bold() // Amarillo brillante si es un hit
+            };
+
+            println!("    {} IP: {:<15} | MAC: {} | Fabricante: {}", 
+                "[@]".bright_cyan(), 
+                ip.cyan(), 
+                mac.bright_magenta(), 
+                mfg_colored
+            );
         }
     }
 
     println!("------------------------------------------------");
-    println!("{} Barrido completado. {} dispositivos respondieron al eco.", "[SOPHON]".bright_green(), found);
+    println!("{} Barrido completado. {} dispositivos analizados en todas las capas.", "[SOPHON]".bright_green(), alive_hosts.len());
 }
 
 /// Llama al comando nativo del sistema operativo de forma multiplataforma
 async fn ping_host(ip: &str) -> bool {
     let mut cmd = Command::new("ping");
 
-    // Detectamos el SO en tiempo de ejecución para usar los parámetros correctos
     if cfg!(target_os = "windows") {
         cmd.args(["-n", "1", "-w", "500", ip]);
     } else if cfg!(target_os = "macos") {
@@ -58,7 +82,6 @@ async fn ping_host(ip: &str) -> bool {
     match output {
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout).to_lowercase();
-            // TTL indica que el paquete rebotó exitosamente
             stdout.contains("ttl=")
         }
         Err(_) => false,
