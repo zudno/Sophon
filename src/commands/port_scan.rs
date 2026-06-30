@@ -2,7 +2,7 @@ use colored::Colorize;
 use tracing::{info, error};
 use crate::net::tcp::scan_ports;
 
-pub async fn ejecutar(ip: &str, ports_str: &str) {
+pub async fn execute(ip: &str, ports_str: &str) {
     info!("Ejecutando comando port-scan para la IP: {} con puertos: {}", ip, ports_str);
     
     // Parsear los puertos introducidos por el usuario

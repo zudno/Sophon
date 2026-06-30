@@ -6,7 +6,7 @@ mod cli;
 mod commands;
 mod net;
 
-use cli::{Cli, Comandos};
+use cli::{Cli, Commands};
 
 #[tokio::main]
 async fn main() {
@@ -31,15 +31,15 @@ async fn main() {
 
     let app = Cli::parse();
 
-    match &app.comando {
-        Comandos::PingSweep { red } => {
-            commands::ping_sweep::ejecutar(red.as_deref()).await;
+    match &app.command {
+        Commands::PingSweep { network } => {
+            commands::ping_sweep::execute(network.as_deref()).await;
         }
-        Comandos::PortScan { ip, ports } => {
-            commands::port_scan::ejecutar(ip, ports).await;
+        Commands::PortScan { ip, ports } => {
+            commands::port_scan::execute(ip, ports).await;
         }
-        Comandos::Arp => {
-            commands::arp::ejecutar().await;
+        Commands::Arp => {
+            commands::arp::execute().await;
         }
     }
 }

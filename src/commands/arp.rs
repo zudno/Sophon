@@ -2,7 +2,7 @@ use colored::Colorize;
 use tracing::info;
 use crate::net::mac::{get_arp_table, get_manufacturer};
 
-pub async fn ejecutar() {
+pub async fn execute() {
     info!("Ejecutando comando arp local");
     println!("{} Leyendo caché ARP del sistema...", "[SOPHON]".blue().bold());
     

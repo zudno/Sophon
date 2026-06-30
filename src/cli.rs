@@ -5,16 +5,16 @@ use clap::{Parser, Subcommand};
 #[command(version, about = "Herramienta de reconocimiento de red", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
-    pub comando: Comandos,
+    pub command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
-pub enum Comandos {
+pub enum Commands {
     /// Realiza un barrido ICMP para descubrir dispositivos vivos en una red
     PingSweep {
         /// Red objetivo en formato CIDR (ej. 192.168.1.0/24). Si se omite, se escaneará la red local automáticamente.
         #[arg(short, long)]
-        red: Option<String>,
+        network: Option<String>,
     },
     /// Escanea puertos TCP de un dispositivo específico
     PortScan {

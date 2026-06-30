@@ -4,14 +4,14 @@ use tracing::{info, error};
 use crate::net::routing::get_local_subnet;
 use crate::net::icmp::sweep_network;
 
-pub async fn ejecutar(red_str: Option<&str>) {
+pub async fn execute(network_str: Option<&str>) {
     info!("Iniciando barrido de red ICMP...");
     
-    let target_net: Ipv4Net = match red_str {
-        Some(red) => match red.parse() {
+    let target_net: Ipv4Net = match network_str {
+        Some(network) => match network.parse() {
             Ok(net) => net,
             Err(_) => {
-                error!("Formato CIDR inválido provisto por el usuario: {}", red);
+                error!("Formato CIDR inválido provisto por el usuario: {}", network);
                 println!("{} Error: Formato CIDR inválido.", "[-]".red());
                 return;
             }
