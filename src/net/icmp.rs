@@ -2,23 +2,24 @@ use ipnet::Ipv4Net;
 use tokio::process::Command;
 use tokio::task;
 use colored::Colorize;
+use tracing::info;
 
-/// Lanza 254 pings simultáneos usando el motor asíncrono de Tokio
-pub async fn sweep_network(subnet: Ipv4Net) {
-    println!("{} Iniciando barrido masivo sobre {}...", "[SOPHON]".blue().bold(), subnet.to_string().bright_red());
+/// Realiza ping de forma concurrente a todos los hosts de una subred y retorna las IPs activas
+pub async fn sweep_network(subnet: Ipv4Net) -> Vec<String> {
+    info!("Iniciando barrido ICMP sobre la subred {}", subnet);
+    println!("{} Iniciando barrido sobre {}...", "[SOPHON]".blue().bold(), subnet.to_string().bright_blue());
     
     let mut tasks = vec![];
 
-    // FASE 1: Detección de Capa 3 y 4
+    // FASE 1: Detección de Capa 3
     for target_ip in subnet.hosts() {
         let ip_str = target_ip.to_string();
         
         let task = task::spawn(async move {
             let is_alive = ping_host(&ip_str).await;
             if is_alive {
-                println!("{} Host vivo detectado: {}", "[+]".bright_green(), ip_str.cyan());
-                crate::net::tcp::scan_ports(&ip_str).await;
-                Some(ip_str) // Devolvemos la IP para la Fase 2
+                println!("{} Host activo detectado: {}", "[+]".bright_green(), ip_str.cyan());
+                Some(ip_str) // Devolvemos la IP para recolectarla
             } else {
                 None
             }
@@ -27,7 +28,7 @@ pub async fn sweep_network(subnet: Ipv4Net) {
         tasks.push(task);
     }
 
-    // Recolectamos a los sobrevivientes
+    // Recolección de IPs activas
     let mut alive_hosts = vec![];
     for t in tasks {
         if let Ok(Some(ip)) = t.await {
@@ -35,34 +36,11 @@ pub async fn sweep_network(subnet: Ipv4Net) {
         }
     }
 
-    // FASE 2: Extracción de Identidades de Hardware (Capa 2)
     println!("------------------------------------------------");
-    println!("{} Infiltrando caché ARP para extraer firmas de hardware...", "[SOPHON]".blue().bold());
-    
-    let arp_table = crate::net::mac::get_arp_table().await;
-    
-    for ip in &alive_hosts {
-        if let Some(mac) = arp_table.get(ip) {
-            let manufacturer = crate::net::mac::get_manufacturer(mac);
-            
-            // Formato condicional para destacar cuando sí reconocemos al fabricante
-            let mfg_colored = if manufacturer.contains("Desconocido") {
-                manufacturer.bright_black() // Gris oscuro si no lo conocemos
-            } else {
-                manufacturer.bright_yellow().bold() // Amarillo brillante si es un hit
-            };
+    println!("{} Barrido completado. {} hosts activos encontrados.", "[SOPHON]".bright_green(), alive_hosts.len());
+    info!("Barrido completado. Se encontraron {} hosts activos.", alive_hosts.len());
 
-            println!("    {} IP: {:<15} | MAC: {} | Fabricante: {}", 
-                "[@]".bright_cyan(), 
-                ip.cyan(), 
-                mac.bright_magenta(), 
-                mfg_colored
-            );
-        }
-    }
-
-    println!("------------------------------------------------");
-    println!("{} Barrido completado. {} dispositivos analizados en todas las capas.", "[SOPHON]".bright_green(), alive_hosts.len());
+    alive_hosts
 }
 
 /// Llama al comando nativo del sistema operativo de forma multiplataforma

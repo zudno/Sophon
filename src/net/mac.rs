@@ -1,36 +1,39 @@
 use std::collections::HashMap;
 use tokio::process::Command;
-use colored::Colorize;
+use tracing::error;
 
-/// Lee la memoria caché ARP del sistema y extrae el mapa de IP -> MAC
+/// Obtiene la tabla ARP del sistema operativo y retorna un mapa de IP a MAC.
 pub async fn get_arp_table() -> HashMap<String, String> {
     let mut arp_map = HashMap::new();
     
     // Ejecutamos el comando nativo del sistema para leer el caché
-    if let Ok(out) = Command::new("arp").arg("-a").output().await {
-        let stdout = String::from_utf8_lossy(&out.stdout);
-        
-        for line in stdout.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
+    match Command::new("arp").arg("-a").output().await {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
             
-            let mut ip = String::new();
-            let mut mac = String::new();
-            
-            // Heurística ligera multiplataforma:
-            // - Las IPs tienen 3 puntos (.)
-            // - Las MACs tienen 5 guiones (-) en Windows o dos puntos (:) en Linux/Mac
-            for part in parts {
-                if part.matches('.').count() == 3 {
-                    ip = part.replace("(", "").replace(")", ""); // Limpiamos formato Linux
-                } else if part.matches('-').count() == 5 || part.matches(':').count() == 5 {
-                    mac = part.replace("-", ":").to_uppercase(); // Normalizamos a formato estándar
+            for line in stdout.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                
+                let mut ip = String::new();
+                let mut mac = String::new();
+                
+                // Heurística ligera multiplataforma para extracción
+                for part in parts {
+                    if part.matches('.').count() == 3 {
+                        ip = part.replace("(", "").replace(")", ""); // Limpiamos formato Linux
+                    } else if part.matches('-').count() == 5 || part.matches(':').count() == 5 {
+                        mac = part.replace("-", ":").to_uppercase(); // Normalizamos a formato estándar
+                    }
+                }
+                
+                // Filtramos MACs de broadcast o vacías
+                if !ip.is_empty() && !mac.is_empty() && !mac.contains("FF:FF:FF:FF:FF:FF") {
+                    arp_map.insert(ip, mac);
                 }
             }
-            
-            // Filtramos MACs de broadcast (FF:FF...) o vacías
-            if !ip.is_empty() && !mac.is_empty() && !mac.contains("FF:FF:FF:FF:FF:FF") {
-                arp_map.insert(ip, mac);
-            }
+        },
+        Err(e) => {
+            error!("Error al ejecutar el comando ARP: {}", e);
         }
     }
     
