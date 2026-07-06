@@ -41,5 +41,8 @@ async fn main() {
         Commands::Arp => {
             commands::arp::execute().await;
         }
+        Commands::Listener { port } => {
+            commands::listener::execute(*port).await;
+        }
     }
 }

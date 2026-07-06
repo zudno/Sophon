@@ -27,4 +27,10 @@ pub enum Commands {
     },
     /// Muestra la tabla de caché ARP y los fabricantes de los dispositivos
     Arp,
+    /// Inicia un listener TCP para recibir conexiones (reverse shell catcher)
+    Listener {
+        /// Puerto local en el que se escuchará (por defecto 4444)
+        #[arg(short, long, default_value = "4444")]
+        port: u16,
+    },
 }
