@@ -32,5 +32,8 @@ pub enum Commands {
         /// Puerto local en el que se escuchará (por defecto 4444)
         #[arg(short, long, default_value = "4444")]
         port: u16,
+        /// Mantiene el listener abierto para aceptar nuevas conexiones tras una desconexión
+        #[arg(short = 'k', long)]
+        persistent: bool,
     },
 }
