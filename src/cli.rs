@@ -36,4 +36,19 @@ pub enum Commands {
         #[arg(short = 'k', long)]
         persistent: bool,
     },
+    /// Genera un payload de reverse shell listo para ejecutar en la víctima
+    Generate {
+        /// IP del atacante (LHOST) a la que se conectará el payload
+        #[arg(short, long)]
+        ip: String,
+        /// Puerto del listener (LPORT) al que se conectará el payload
+        #[arg(short, long, default_value = "4444")]
+        port: u16,
+        /// Tipo de payload: powershell
+        #[arg(short = 't', long = "type")]
+        payload_type: String,
+        /// Ruta opcional para guardar el payload como archivo (ej. payload.ps1)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }

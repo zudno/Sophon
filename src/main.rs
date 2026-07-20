@@ -44,5 +44,8 @@ async fn main() {
         Commands::Listener { port, persistent } => {
             commands::listener::execute(*port, *persistent).await;
         }
+        Commands::Generate { ip, port, payload_type, output } => {
+            commands::generate::execute(ip, *port, payload_type, output.as_deref()).await;
+        }
     }
 }
